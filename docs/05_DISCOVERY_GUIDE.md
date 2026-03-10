@@ -25,7 +25,7 @@ All examples assume `$TOKEN` is set (see [01_AUTHENTICATION.md](01_AUTHENTICATIO
 | `SqlColumns` | Raw database columns, types, primary key flags |
 | `SqlTableKeys` | Constraints on database tables |
 
-4. **It's okay to try things.** The automation user is scoped to read-only introspection. An exploratory LoadCollection or Invoke that fails will return a clear error message, not break anything. However, **ask the user before executing methods that modify data** (Insert, Update, Delete, or Invoke on methods that change state).
+4. **It's okay to try things.** The agent user is scoped to read-only introspection. An exploratory LoadCollection or Invoke that fails will return a clear error message, not break anything. However, **ask the user before executing methods that modify data** (Insert, Update, Delete, or Invoke on methods that change state) — those should use the automation user if configured.
 
 ---
 

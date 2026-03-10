@@ -23,13 +23,15 @@ Do not hardcode a config list in scripts or docs. Config names are environment-s
 
 ## Getting a Token
 
+All discovery and introspection uses the **agent user**. When testing or executing API calls, use the **automation user** if configured (see [06_GOTCHAS.md — Testing with the Automation User](06_GOTCHAS.md#testing-with-the-automation-user)).
+
 ### Bash
 
 ```bash
 SITE_CONFIG="${DEFAULT_SITE:-Demo_DALS}"
 TOKEN=$(curl -s "$SYTELINE_BASE_URL/token/$SITE_CONFIG" \
-  -H "username: $SYTELINE_USERNAME" \
-  -H "password: $SYTELINE_PASSWORD" | jq -r '.Token')
+  -H "username: $SYTELINE_AGENT_USERNAME" \
+  -H "password: $SYTELINE_AGENT_PASSWORD" | jq -r '.Token')
 ```
 
 ### PowerShell
@@ -37,8 +39,8 @@ TOKEN=$(curl -s "$SYTELINE_BASE_URL/token/$SITE_CONFIG" \
 ```powershell
 $SITE_CONFIG = if ($env:DEFAULT_SITE) { $env:DEFAULT_SITE } else { "Demo_DALS" }
 $TOKEN = (curl -s "$env:SYTELINE_BASE_URL/token/$SITE_CONFIG" `
-  -H "username: $env:SYTELINE_USERNAME" `
-  -H "password: $env:SYTELINE_PASSWORD" | ConvertFrom-Json).Token
+  -H "username: $env:SYTELINE_AGENT_USERNAME" `
+  -H "password: $env:SYTELINE_AGENT_PASSWORD" | ConvertFrom-Json).Token
 ```
 
 ### Response
@@ -76,8 +78,8 @@ curl -s "$SYTELINE_BASE_URL/load/SLSites?properties=Site,Description&recordcap=0
 # Step 2: ask user which site configs to process, then loop only those
 for SITE_CONFIG in "$@"; do
   TOKEN=$(curl -s "$SYTELINE_BASE_URL/token/$SITE_CONFIG" \
-    -H "username: $SYTELINE_USERNAME" \
-    -H "password: $SYTELINE_PASSWORD" | jq -r '.Token')
+    -H "username: $SYTELINE_AGENT_USERNAME" \
+    -H "password: $SYTELINE_AGENT_PASSWORD" | jq -r '.Token')
   # ... use $TOKEN for this selected site ...
 done
 ```
@@ -91,7 +93,7 @@ API sessions check permissions against **IDOs**, not forms. The user account mus
 
 This differs from the Syteline UI, where permissions are checked against forms.
 
-> If you get `"You are not licensed to use the {FormName} form"`, the automation user needs either form access or a license module that covers the target IDO.
+> If you get `"You are not licensed to use the {FormName} form"`, the user needs either form access or a license module that covers the target IDO. For introspection errors, grant the permission to the **agent user**. For business-data errors during testing, grant the permission to the **automation user** only.
 
 ## Health Check
 

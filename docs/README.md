@@ -28,16 +28,25 @@
 
 ## Credential Setup
 
-Credentials are stored in environment variables (sourced from `.env`):
+Two user accounts are supported (sourced from `.env`):
 
 ```env
 SYTELINE_BASE_URL=https://YOUR-SYTELINE-HOST/IDORequestService/ido
 DEFAULT_SITE=Demo_DALS
-SYTELINE_USERNAME=<automation-user>
-SYTELINE_PASSWORD=<from .env>
+
+# Agent user — introspection only (discovers IDO structure)
+SYTELINE_AGENT_USERNAME=<agent-user>
+SYTELINE_AGENT_PASSWORD=<from .env>
+
+# Automation user — optional (tests/executes API calls)
+SYTELINE_AUTOMATION_USERNAME=<automation-user>
+SYTELINE_AUTOMATION_PASSWORD=<from .env>
 ```
 
-**Never hardcode credentials in scripts or documentation.** Use `$SYTELINE_USERNAME` / `$SYTELINE_PASSWORD` (bash) or `$env:SYTELINE_USERNAME` / `$env:SYTELINE_PASSWORD` (PowerShell).
+- **Agent user:** Has meta-IDO permissions only. Used for all discovery and introspection. Should **not** have access to real business data.
+- **Automation user:** Optional. Used to test and execute the API calls the agent builds. Grant task-specific IDO permissions to this user as needed.
+
+**Never hardcode credentials in scripts or documentation.** Use `$SYTELINE_AGENT_USERNAME` / `$SYTELINE_AGENT_PASSWORD` (bash) or `$env:SYTELINE_AGENT_USERNAME` / `$env:SYTELINE_AGENT_PASSWORD` (PowerShell). When testing with the automation user, use `$SYTELINE_AUTOMATION_USERNAME` / `$SYTELINE_AUTOMATION_PASSWORD`.
 
 ## What These Docs Don't Cover
 

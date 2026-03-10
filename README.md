@@ -4,14 +4,16 @@ Reference documentation for the Infor Syteline (CloudSuite Industrial) IDO REST 
 
 ## Prerequisites
 
-A dedicated Syteline automation user with the following configuration:
+### 1. Agent User (`SYTELINE_AGENT_USERNAME`) — introspection only
+
+A dedicated Syteline user whose **sole purpose** is system introspection. This user discovers IDO structures, methods, and parameters so the agent can build API calls. It should **not** have permissions to read or modify real business data.
 
 - **License:** Automation
 - **Super User:** unchecked
 - **Groups:** none
 - **Password:** set (used via HTTP headers — never in URL paths)
 
-### Required IDO Permissions (you can Paste Rows Append these into User Permissions!)
+#### Required IDO Permissions (you can Paste Rows Append these into User Permissions!)
 
 | IDO | Read | Execute | Edit | Insert | Delete | Update |
 |---|---|---|---|---|---|---|
@@ -35,7 +37,18 @@ A dedicated Syteline automation user with the following configuration:
 | `SqlTableKeys` | Granted | Granted | Revoked | — | — | Revoked |
 | `SqlTables` | Granted | Granted | Revoked | — | — | Revoked |
 
-Additional IDO permissions will be required per task (e.g., `Read` on `SLItemprices` or `SVC_SLItemPrices` to query item pricing data). Grant the minimum necessary permissions for each integration.
+These are **meta-IDO** permissions only. Do **not** grant this user access to business-data IDOs (e.g., `SLItems`, `SLItemprices`, `COs`).
+
+### 2. Automation User (`SYTELINE_AUTOMATION_USERNAME`) — optional, for testing
+
+A separate Syteline user used to **test and execute** the API calls the agent builds. This user is optional — set it up only when you want the agent to run API calls against the live system.
+
+- **License:** Automation
+- **Super User:** unchecked
+- **Groups:** none
+- **Password:** set
+
+Grant task-specific IDO permissions to this user as needed (e.g., `Read` on `SLItemprices` or `SVC_SLItemPrices` to query item pricing data). Grant the minimum necessary permissions for each integration. **Never grant these permissions to the agent user.**
 
 ---
 

@@ -22,7 +22,7 @@ Body: [ ...20 positional parameters... ]
 | 4 | TaskID | NUMERIC(11) | OUTPUT | `null` (returns assigned task number) |
 | 5 | TaskStatusCode | VARCHAR(8) | INPUT | `null` |
 | 6 | StringTable | VARCHAR(255) | INPUT | `null` |
-| 7 | RequestingUser | VARCHAR(128) | INPUT | `"$SYTELINE_USERNAME"` |
+| 7 | RequestingUser | VARCHAR(128) | INPUT | `"$SYTELINE_AUTOMATION_USERNAME"` |
 | 8 | PrintPreview | BYTE | INPUT | `0` (**not** `false`) |
 | 9 | TaskHistoryRowPointer | GUID | OUTPUT | `null` |
 | 10 | PreviewInterval | LONG(10) | OUTPUT | `null` |
@@ -37,7 +37,7 @@ For running a task right now (no scheduling), set indices 11-19 to `null`:
   "TASK_NAME_HERE",
   "TASK_PARMS1_HERE",
   null, null, null, null, null,
-  "$SYTELINE_USERNAME",
+  "$SYTELINE_AUTOMATION_USERNAME",
   0,
   null, null,
   null, null, null, null, null, null, null, null, null
@@ -53,7 +53,7 @@ curl -s -X POST \
   "$SYTELINE_BASE_URL/invoke/BGTaskDefinitions?method=BGTaskSubmit" \
   -H "Authorization: $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '["ChangeCOStatusUtility","TASK_PARMS1_VALUE",null,null,null,null,null,"$SYTELINE_USERNAME",0,null,null,null,null,null,null,null,null,null,null,null]'
+  -d '["ChangeCOStatusUtility","TASK_PARMS1_VALUE",null,null,null,null,null,"$SYTELINE_AUTOMATION_USERNAME",0,null,null,null,null,null,null,null,null,null,null,null]'
 ```
 
 ### Successful Response
