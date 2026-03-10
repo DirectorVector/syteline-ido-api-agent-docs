@@ -44,7 +44,7 @@ curl -s "$SYTELINE_BASE_URL/load/IdoCollections?properties=CollectionName,Access
 
 `AccessAs` helps distinguish core vs custom IDOs:
 - `AccessAs = 'BaseSyteLine'` → Core Syteline IDO (delivered by Infor)
-- `AccessAs = ''` (empty) → Custom IDO (added by the implementation team)
+- `AccessAs = ''` (empty) → Custom IDO (added by the implementation team, often prefixed with a company identifier like `CMP_`)
 
 ### Strategy B: Search by stored procedure name
 
@@ -72,7 +72,7 @@ curl -s "$SYTELINE_BASE_URL/load/IdoTables?properties=CollectionName,TableName,T
 
 **You usually want the IDO where your table is the Primary Base Table (TableType=3).**
 
-If multiple IDOs share the same primary table, check `AccessAs` on `IdoCollections` to find the core one (or use the extended version if it exists — the extended IDO inherits the core IDO's methods and adds custom properties).
+If multiple IDOs share the same primary table, check `AccessAs` on `IdoCollections` to find the core one (or use the `CMP_`-prefixed extended version if it exists — the extended IDO inherits the core IDO's methods and adds custom properties).
 
 ### Strategy D: Poke around with a LoadCollection
 
@@ -85,7 +85,7 @@ curl -s "$SYTELINE_BASE_URL/load/UserNames?recordcap=3" \
 
 Omitting `properties` returns all properties. Seeing the actual data helps you verify you're looking at the right IDO — column names, data shapes, and values tell you a lot.
 
-> **Note:** Some core IDOs (e.g., `SLItemprices`) may be replaced by an extended version. If you get `"User requires [Read] privilege for {ExtendedIDO}"`, the system is redirecting through the extended IDO. Request permissions for that IDO, or try loading with specific properties.
+> **Note:** Some core IDOs (e.g., `SLItemprices`) may be replaced by a custom extended version (e.g., `CMP_SLItemPrices`) via extend and replace. If you get `"User requires [Read] privilege for CMP_{IDO}"`, the system is redirecting through the extended IDO. Request permissions on the IDO named in the error.
 
 ---
 
@@ -321,7 +321,7 @@ curl -s "$SYTELINE_BASE_URL/load/IdoCollections?properties=CollectionName,Access
   -H "Authorization: $TOKEN"
 ```
 
-For deletes, it usually doesn't matter whether you use the core IDO or the extended version — the delete hits the same base table.
+For deletes, it usually doesn't matter whether you use the core IDO or the `CMP_`-extended version — the delete hits the same base table.
 
 ### 3. Map SQL column names to IDO property names
 

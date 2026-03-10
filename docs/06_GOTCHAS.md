@@ -23,6 +23,14 @@ Before executing Invoke calls on methods that modify state, or Update calls (Ins
 
 If you need access to an introspection IDO (like `IdoMethodParameters`) and get a permission error, tell the user. These are safe, read-only IDOs and the user's admin can grant access to the **agent user** quickly. Don't silently skip a discovery step because of a permission error.
 
+### Extended IDO redirects (extend and replace)
+
+Some implementations configure custom IDOs (e.g., `CMP_SLItemPrices`) to **extend and replace** a core IDO (e.g., `SLItemprices`). When you request the core IDO, the system silently redirects the request to the custom IDO. If the user doesn't have permissions on either the base or the extended IDO, the error message will reference the custom IDO — not the one you originally requested.
+
+For example, loading `SLItemprices` may return `"User requires [Read] privilege for CMP_SLItemPrices"`. This means the system redirected through the extended IDO. Request permissions on the IDO named in the error message.
+
+> **Note:** The agent user typically won't have permissions on either the base or extended business-data IDO — that's by design. If testing with the automation user, grant permissions on the specific IDO referenced in the error.
+
 ---
 
 ## Testing with the Automation User
@@ -53,7 +61,7 @@ curl -s -X GET \
 If the test returns a permission error (e.g., `"User requires [Read] privilege for SLItemprices"`), ask the user to grant the required permission to the **automation user** (`$SYTELINE_AUTOMATION_USERNAME`) for the specific IDO(s). **Do not** grant these permissions to the **agent user** (`$SYTELINE_AGENT_USERNAME`) — the agent user should remain limited to introspection.
 
 Example message to the user:
-> The automation user needs `[Read]` permission on the `SLItemprices` IDO. Please grant this in Syteline's Object Authorizations for the automation user only — not the agent user.
+> The automation user needs `[Read]` permission on the `SLItemprices` IDO (or `CMP_SLItemPrices` if the system redirects via extend and replace). Please grant this in Syteline's Object Authorizations for the automation user only — not the agent user.
 
 ---
 
