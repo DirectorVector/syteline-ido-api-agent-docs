@@ -45,6 +45,7 @@ Once you have built the necessary API call(s) that solve the user's request, ask
 
 ```bash
 # Authenticate as the automation user for testing
+SITE_CONFIG="${DEFAULT_SITE:-Demo_DALS}"
 AUTOMATION_TOKEN=$(curl -s "$SYTELINE_BASE_URL/token/$SITE_CONFIG" \
   -H "username: $SYTELINE_AUTOMATION_USERNAME" \
   -H "password: $SYTELINE_AUTOMATION_PASSWORD" | jq -r '.Token')
