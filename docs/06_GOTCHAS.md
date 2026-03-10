@@ -23,14 +23,6 @@ Before executing Invoke calls on methods that modify state, or Update calls (Ins
 
 If you need access to an introspection IDO (like `IdoMethodParameters`) and get a permission error, tell the user. These are safe, read-only IDOs and the user's admin can grant access to the **agent user** quickly. Don't silently skip a discovery step because of a permission error.
 
-### `SVC_` prefix pattern for permissions
-
-Custom IDOs prefixed with `SVC_` often require separate authorization from their core `SL` counterparts. If you can access `SLItemprices` but not `SVC_SLItemPrices` (or vice versa), the user may need to grant authorization on the specific IDO you need.
-
-### Extended IDO redirects
-
-Some core IDOs are replaced by extended `SVC_` versions. When you load `SLItemprices`, the system may silently redirect to `SVC_SLItemPrices`. If you get `"User requires [Read] privilege for SVC_{IDO}"`, this is the redirect in action — request permissions on the `SVC_` IDO.
-
 ---
 
 ## Testing with the Automation User
@@ -61,7 +53,7 @@ curl -s -X GET \
 If the test returns a permission error (e.g., `"User requires [Read] privilege for SLItemprices"`), ask the user to grant the required permission to the **automation user** (`$SYTELINE_AUTOMATION_USERNAME`) for the specific IDO(s). **Do not** grant these permissions to the **agent user** (`$SYTELINE_AGENT_USERNAME`) — the agent user should remain limited to introspection.
 
 Example message to the user:
-> The automation user needs `[Read]` permission on the `SLItemprices` IDO (or `SVC_SLItemPrices` if the system redirects). Please grant this in Syteline's Object Authorizations for the automation user only — not the agent user.
+> The automation user needs `[Read]` permission on the `SLItemprices` IDO. Please grant this in Syteline's Object Authorizations for the automation user only — not the agent user.
 
 ---
 

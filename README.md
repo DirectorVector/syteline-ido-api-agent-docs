@@ -48,7 +48,7 @@ A separate Syteline user used to **test and execute** the API calls the agent bu
 - **Groups:** none
 - **Password:** set
 
-Grant task-specific IDO permissions to this user as needed (e.g., `Read` on `SLItemprices` or `SVC_SLItemPrices` to query item pricing data). Grant the minimum necessary permissions for each integration. **Never grant these permissions to the agent user.**
+Grant task-specific IDO permissions to this user as needed (e.g., `Read` on `SLUserNames` to query user data). Grant the minimum necessary permissions for each integration. **Never grant these permissions to the agent user.**
 
 ---
 
