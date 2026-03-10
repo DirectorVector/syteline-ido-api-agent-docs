@@ -6,9 +6,14 @@ Proven pitfalls from real testing against the Syteline IDO REST API.
 
 ## Permissions & Safety
 
+### Two users, two roles
+
+- **Agent user** (`$SYTELINE_AGENT_USERNAME`) — introspection only. Has meta-IDO permissions to discover IDO structures, methods, and parameters. Should **not** have access to real business data.
+- **Automation user** (`$SYTELINE_AUTOMATION_USERNAME`) — optional. Used to test and execute the API calls the agent builds. Grant task-specific IDO permissions to this user as needed.
+
 ### Exploratory calls are safe
 
-The automation user is typically scoped to read-only introspection. LoadCollection calls and failed Invoke attempts return clear error messages — they won't break anything. It's okay to try things during discovery.
+The agent user is scoped to read-only introspection. LoadCollection calls and failed Invoke attempts return clear error messages — they won't break anything. It's okay to try things during discovery.
 
 ### Ask before modifying data
 
@@ -16,15 +21,47 @@ Before executing Invoke calls on methods that modify state, or Update calls (Ins
 
 ### Request missing permissions explicitly
 
-If you need access to an introspection IDO (like `IdoMethodParameters`) and get a permission error, tell the user. These are safe, read-only IDOs and the user's admin can grant access quickly. Don't silently skip a discovery step because of a permission error.
+If you need access to an introspection IDO (like `IdoMethodParameters`) and get a permission error, tell the user. These are safe, read-only IDOs and the user's admin can grant access to the **agent user** quickly. Don't silently skip a discovery step because of a permission error.
 
-### `SVC_` prefix pattern for permissions
+### Extended IDO redirects (extend and replace)
 
-Custom IDOs prefixed with `SVC_` often require separate authorization from their core `SL` counterparts. If you can access `SLItemprices` but not `SVC_SLItemPrices` (or vice versa), the user may need to grant authorization on the specific IDO you need.
+Some implementations configure custom IDOs (e.g., `CMP_SLItemPrices`) to **extend and replace** a core IDO (e.g., `SLItemprices`). When you request the core IDO, the system silently redirects the request to the custom IDO. If the user doesn't have permissions on either the base or the extended IDO, the error message will reference the custom IDO — not the one you originally requested.
 
-### Extended IDO redirects
+For example, loading `SLItemprices` may return `"User requires [Read] privilege for CMP_SLItemPrices"`. This means the system redirected through the extended IDO. Request permissions on the IDO named in the error message.
 
-Some core IDOs are replaced by extended `SVC_` versions. When you load `SLItemprices`, the system may silently redirect to `SVC_SLItemPrices`. If you get `"User requires [Read] privilege for SVC_{IDO}"`, this is the redirect in action — request permissions on the `SVC_` IDO.
+> **Note:** The agent user typically won't have permissions on either the base or extended business-data IDO — that's by design. If testing with the automation user, grant permissions on the specific IDO referenced in the error.
+
+---
+
+## Testing with the Automation User
+
+Once you have built the necessary API call(s) that solve the user's request, ask the user if they want to test them using the automation user (`$SYTELINE_AUTOMATION_USERNAME`).
+
+### Workflow
+
+1. **Build the API call(s)** using discovery (with the agent user).
+2. **Present the call(s) to the user** — show them the curl command(s) you've constructed.
+3. **Ask if they want to test.** If `$SYTELINE_AUTOMATION_USERNAME` is configured and the user agrees, authenticate as the automation user and execute the call(s).
+
+```bash
+# Authenticate as the automation user for testing
+SITE_CONFIG="${DEFAULT_SITE:-Demo_DALS}"
+AUTOMATION_TOKEN=$(curl -s "$SYTELINE_BASE_URL/token/$SITE_CONFIG" \
+  -H "username: $SYTELINE_AUTOMATION_USERNAME" \
+  -H "password: $SYTELINE_AUTOMATION_PASSWORD" | jq -r '.Token')
+
+# Execute the API call with the automation user's token
+curl -s -X GET \
+  "$SYTELINE_BASE_URL/load/SLItemprices?properties=Item,UnitPrice1&filter=Item%20%3D%20N'WIDGET-A'&recordcap=10" \
+  -H "Authorization: $AUTOMATION_TOKEN"
+```
+
+### Handling insufficient permissions
+
+If the test returns a permission error (e.g., `"User requires [Read] privilege for SLItemprices"`), ask the user to grant the required permission to the **automation user** (`$SYTELINE_AUTOMATION_USERNAME`) for the specific IDO(s). **Do not** grant these permissions to the **agent user** (`$SYTELINE_AGENT_USERNAME`) — the agent user should remain limited to introspection.
+
+Example message to the user:
+> The automation user needs `[Read]` permission on the `SLItemprices` IDO (or `CMP_SLItemPrices` if the system redirects via extend and replace). Please grant this in Syteline's Object Authorizations for the automation user only — not the agent user.
 
 ---
 
@@ -60,9 +97,9 @@ For methods like BGTaskSubmit (20 parameters), every position must exist. Use `n
 
 ### "User is not licensed..."
 
-The automation user doesn't have IDO-level permissions or a license module covering the IDO.
+The user doesn't have IDO-level permissions or a license module covering the IDO.
 
-**Fix:** Grant the user authorization in Syteline's Object Authorizations (at the IDO level, not form level). API sessions check permissions against IDOs, not forms.
+**Fix:** Grant the user authorization in Syteline's Object Authorizations (at the IDO level, not form level). API sessions check permissions against IDOs, not forms. For introspection IDOs, grant to the **agent user**. For business-data IDOs, grant to the **automation user** only.
 
 ### "format is invalid" in PowerShell
 

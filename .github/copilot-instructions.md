@@ -17,6 +17,6 @@ This repository contains reference documentation for the Infor Syteline (CloudSu
 ### Development Guidelines
 - Use `curl` for all API examples (universal, easily convertible to any client)
 - Pass credentials via HTTP headers, never in URL paths
-- Use environment variables (`$SYTELINE_USERNAME`, `$SYTELINE_PASSWORD`) — never hardcode credentials
+- Use environment variables (`$SYTELINE_AGENT_USERNAME`, `$SYTELINE_AGENT_PASSWORD` for discovery; `$SYTELINE_AUTOMATION_USERNAME`, `$SYTELINE_AUTOMATION_PASSWORD` for testing) — never hardcode credentials
 - Set small `recordcap` values during discovery to avoid overwhelming responses
 - Verify API behavior by running actual requests against the test environment
