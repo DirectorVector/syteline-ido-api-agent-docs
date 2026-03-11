@@ -9,5 +9,9 @@
     "search.exclude": {
         "**/.git": true,
         "**/node_modules": true
-    }
+    },
+    "explorer.autoReveal": true,
+    "workbench.activityBar.autoHide": false,
+    "workbench.activityBar.compact": false,
+    "workbench.activityBar.location": "default"
 }

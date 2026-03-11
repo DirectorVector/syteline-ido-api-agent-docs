@@ -96,13 +96,19 @@ Example methods on the `UserNames` IDO:
 
 ## Why This Matters for API Work
 
-When Infor converts a stored procedure to an extension class method, **direct SQL calls stop working** and you get errors like:
+### Infor's "Database Code-Out" Initiative
+
+Infor is actively migrating business logic out of SQL Server stored procedures and into .NET extension class methods (C# DLLs) as part of a long-term platform modernization effort. This is sometimes called the **"database code-out"** initiative. The goal is to make Syteline cloud-hostable by removing hard dependencies on direct database access.
+
+**The practical impact for your organization:** SQL scripts that called stored procedures directly with `EXEC SpName` will break — silently at first, then with an error — as each SP is converted. The `StoredProcedure` column on `IdoMethods` will also become empty for converted methods, since there is no longer an underlying SP to reference.
+
+When a converted SP is called directly:
 
 > *"You may not call this '{SpName}' as it has been converted to custom assembly application method."*
 
-The fix is always the same: **call it through the IDO layer via the REST API** instead of calling the stored procedure directly. The IDO method wraps the same logic, whether it's a stored procedure or extension class code.
+The fix is always the same: **call it through the IDO layer via the REST API** instead. The IDO method wraps the same logic — whether the implementation is a stored procedure or extension class code, the method name and parameter signature stay stable.
 
-This is why migrating from direct SQL to the IDO REST API is the correct long-term pattern — the IDO layer is the stable interface. The implementation behind it (SQL SP vs. .NET code) can change without breaking your integration.
+**This is the core reason to migrate from SQL scripts to IDO REST API calls.** The IDO layer is the stable interface that Infor commits to maintaining across versions. The implementation behind it can change without breaking integrations built against the IDO API.
 
 ## Self-Describing System
 

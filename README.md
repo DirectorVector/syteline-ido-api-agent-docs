@@ -2,6 +2,12 @@
 
 Reference documentation for the Infor Syteline (CloudSuite Industrial) IDO REST API, designed to be attached to any AI coding agent's context.
 
+## Deliverable Log
+
+[`DELIVERABLE_LOG.md`](DELIVERABLE_LOG.md) is a running log of tasks agents have completed in this repo. Each entry records the request, the discovery path taken, and the final deliverable (curl command). **Read it first** — your task may already be solved. **Append an entry when you finish** so the next agent can benefit.
+
+---
+
 ## Prerequisites
 
 ### 1. Agent User (`SYTELINE_AGENT_USERNAME`) — introspection only

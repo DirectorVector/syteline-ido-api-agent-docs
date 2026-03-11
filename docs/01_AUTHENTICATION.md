@@ -66,6 +66,23 @@ curl -s -X GET \
   -H "Authorization: $TOKEN"
 ```
 
+### PowerShell: Always Use `curl.exe`, Not `Invoke-RestMethod`
+
+PowerShell's `Invoke-RestMethod` rejects the Syteline token format — it throws `"The format of value '...' is invalid"` because it tries to parse the `Authorization` header as a standard scheme (`Bearer`, `Basic`, etc.).
+
+**Always use `curl.exe`** (the native Windows binary, not the PowerShell alias) for all Syteline API calls:
+
+```powershell
+# Correct — curl.exe passes the header as-is
+curl.exe -s "$env:SYTELINE_BASE_URL/load/SomeIDO?properties=Col1,Col2" `
+  -H "Authorization: $TOKEN"
+
+# Wrong — Invoke-RestMethod rejects the raw token value
+Invoke-RestMethod -Uri "..." -Headers @{ Authorization = $TOKEN }  # DO NOT USE
+```
+
+`curl.exe` is present on Windows 10/11 and Windows Server 2019+ by default. On older systems, install it from [curl.se](https://curl.se) or use WSL.
+
 ## Multi-Site Workflows
 
 Each site requires its own token. Start with `DEFAULT_SITE` for single-site tasks. Only run discovery and multi-site loops when `DEFAULT_SITE` is not applicable or the user asks for additional sites.

@@ -123,6 +123,16 @@ The body is a **flat JSON array** of positional parameters. Not wrapped in an ob
 
 Methods can have input, output, or input/output parameters. Output values are returned in the same positional index in `Parameters[]`. Pass `null` for output-only parameters in the request.
 
+### The Infobar pattern
+
+Most Syteline stored procedure methods have an `Infobar` parameter (type `VARCHAR`, `InputFlag=1`, `OutputFlag=1`) — typically the last or second-to-last parameter. It returns a human-readable summary of what the method did, e.g. `"723 Item(s) were processed."`
+
+- Pass `null` for it in the request body.
+- On success check `Parameters[n]` at the `Infobar` sequence index (0-based: `Sequence - 1`) for the result message.
+- On validation failure (`ReturnValue: "16"`), `Infobar` will contain the error description.
+
+Always include `Infobar` in your parameter array even if you don't intend to use it — omitting it will shift all subsequent positional indices and cause a parsing error.
+
 ### Example: Call a method
 
 ```bash
@@ -153,60 +163,95 @@ Authorization: {token}
 Content-Type: application/json
 ```
 
+Optional query parameter: `?refresh=true` — instructs the server to return refreshed property values in `RefreshItems` after the update.
+
+### Action Codes
+
+| Code | Operation |
+|------|-----------|
+| `1`  | Insert    |
+| `2`  | Update    |
+| `4`  | Delete    |
+
+### The `ItemId` Token
+
+For Update and Delete, the `ItemId` field is the row identity token returned as `_ItemId` in every LoadCollection response. It encodes the table, timestamp, and row GUID — the IDO runtime uses it for optimistic locking and row location. **Always pass it for updates and deletes.**
+
+If `ItemId` is omitted, the IDO falls back to key-property matching with no optimistic locking — all key properties must then be included in `Properties`.
+
 ### Insert
 
+Properties are an array of `{Name, Value, Modified, IsNull}` objects.
+
 ```json
 {
-  "Items": [
+  "Changes": [
     {
-      "Action": "Insert",
-      "Properties": {
-        "PropertyName1": "value1",
-        "PropertyName2": "value2"
-      }
+      "Action": 1,
+      "ItemId": "PBT=[UserNames]",
+      "Properties": [
+        { "Name": "Username",  "Value": "jdelacruz",     "Modified": true, "IsNull": false },
+        { "Name": "UserDesc",  "Value": "Juan Dela Cruz", "Modified": true, "IsNull": false }
+      ],
+      "UpdateLocking": 1
     }
   ]
 }
 ```
 
-### Update by Key
+### Update
 
 ```json
 {
-  "Items": [
+  "Changes": [
     {
-      "Action": "Update",
-      "Properties": {
-        "KeyProperty": "key_value",
-        "PropertyToChange": "new_value"
-      }
+      "Action": 2,
+      "ItemId": "PBT=[UserNames] UserNames.DT=[2018-10-02 15:39:02.060] UserNames.ID=[4c9a96d0-ba3c-4de4-8657-6d262f9dcd3f]",
+      "Properties": [
+        { "Name": "UserDesc", "Value": "John Doe Sr.", "Modified": true, "IsNull": false }
+      ],
+      "UpdateLocking": 1
     }
   ]
 }
 ```
 
-### Delete by Key
+### Delete
+
+Delete only requires `Action` and `ItemId` — no `Properties` array needed.
 
 ```json
 {
-  "Items": [
+  "Changes": [
     {
-      "Action": "Delete",
-      "Properties": {
-        "KeyProperty": "key_value"
-      }
+      "Action": 4,
+      "ItemId": "PBT=[UserNames] UserNames.DT=[2018-12-14 13:52:27.737] UserNames.ID=[265df7d2-802c-4582-a774-a81b675a91a1]"
     }
   ]
 }
 ```
+
+**Send one record per request.** Although the schema accepts multiple `Changes` entries, in practice only the first item processes successfully — subsequent items in the same request fail silently or with an error. Loop over records individually (n8n does this by default; in scripts use one request per row).
+
+### Response
+
+```json
+{
+  "Message": null,
+  "Success": true,
+  "RefreshItems": null
+}
+```
+
+- `Success: true` + `RefreshItems: null` — delete succeeded
+- `Success: false` + `Message` — error; check `Message` for details
 
 ### Important Notes
 
-- To update or delete, you need the **key values** for the record. Find keys using `SqlColumns` with `isPrimaryKey=1` — see [05_DISCOVERY_GUIDE.md](05_DISCOVERY_GUIDE.md#step-6-find-primary-keys).
+- **Always LoadCollection first** with a small `recordcap` to verify the scope of your filter before deleting. Confirm the records look right, then use the `_ItemId` values from that response as `ItemId` in the delete `Changes` array.
+- The `_ItemId` field from LoadCollection maps directly to `ItemId` in UpdateCollection — just drop the underscore.
 - Include all non-nullable properties that don't have defaults when inserting.
-- The IDO runtime handles the SQL generation — you never write raw INSERT/UPDATE/DELETE statements.
-- **Before deleting,** always LoadCollection first with a small `recordcap` to verify the scope of your filter. Many tables have compound keys (e.g., item + currency + date + site), and a filter on one column may match far more records than intended.
-- If converting a raw SQL `DELETE FROM` to an API call, see the [Delete conversion walkthrough](05_DISCOVERY_GUIDE.md#practical-example-convert-a-sql-delete-to-an-api-call) for the full discovery process.
+- The IDO runtime handles SQL generation — you never write raw INSERT/UPDATE/DELETE statements.
 
 ---
 

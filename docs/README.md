@@ -18,6 +18,10 @@
 | [05_DISCOVERY_GUIDE.md](05_DISCOVERY_GUIDE.md) | How to find any IDO, its properties, methods, and parameter formats — "teach an agent to fish" |
 | [06_GOTCHAS.md](06_GOTCHAS.md) | Data type pitfalls, common errors, troubleshooting |
 
+## Deliverable Log
+
+See [`DELIVERABLE_LOG.md`](../DELIVERABLE_LOG.md) in the repo root for a running log of completed agent tasks — what was requested, how it was solved, and the final API calls. Check it before starting work; append to it when you're done.
+
 ## Quick Start for Agents
 
 1. Read [01_AUTHENTICATION.md](01_AUTHENTICATION.md) to get a token

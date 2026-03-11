@@ -115,7 +115,7 @@ curl -s "$SYTELINE_BASE_URL/load/IdoProperties?properties=PropertyName,ColumnNam
 ## Step 3: Get Methods on the IDO
 
 ```bash
-curl -s "$SYTELINE_BASE_URL/load/IdoMethods?properties=MethodName,MethodType,StoredProcedure&filter=CollectionName%20%3D%20N'SLItemprices'&recordcap=0" \
+curl -s "$SYTELINE_BASE_URL/load/IdoMethods?properties=MethodName,MethodType&filter=CollectionName%20%3D%20N'SLItemprices'&recordcap=0" \
   -H "Authorization: $TOKEN"
 ```
 
@@ -123,6 +123,8 @@ This tells you:
 - What methods are available
 - Whether each is a stored procedure (`MethodType=0`) or extension class (`MethodType=2`)
 - The stored procedure name (if applicable)
+
+> **Note:** The `StoredProcedure` property is documented in some Syteline versions but may not exist on `IdoMethods` in your environment — you'll get `"Property StoredProcedure not found"`. Omit it and use just `MethodName,MethodType`; the method name is sufficient to proceed to Step 4.
 
 When a stored procedure has been converted to an extension class (MethodType=2), it can **only** be called through the IDO API, not via direct SQL `EXEC`.
 
@@ -150,6 +152,8 @@ This returns every parameter with:
 | `OutputFlag` | `1` = output parameter |
 
 Parameters with both `InputFlag=1` and `OutputFlag=1` are **IN/OUT** — pass a value in, and the method writes back to the same position.
+
+> **Note:** A `Direction` property is referenced in some Syteline docs but does not exist on `IdoMethodParameters` — you'll get `"Property Direction not found"`. Use `InputFlag` and `OutputFlag` instead; they convey the same information.
 
 **This is the definitive way to build an `/invoke` call.** The parameter count and order from `IdoMethodParameters` must match your JSON array exactly.
 

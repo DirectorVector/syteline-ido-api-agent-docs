@@ -6,6 +6,7 @@ This repository contains reference documentation for the Infor Syteline (CloudSu
 
 ### Repository Structure
 - `docs/` — The main documentation set (authentication, IDO concepts, API operations, discovery, gotchas)
+- `DELIVERABLE_LOG.md` — Running log of completed agent tasks: what was requested, how it was solved, and the final API call(s). **Read this before starting a new task** — a prior agent may have already solved it. **Append an entry when you finish.**
 - `.env.template` — Template for credential and token configuration
 
 ### Key Concepts

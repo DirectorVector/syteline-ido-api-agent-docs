@@ -78,14 +78,46 @@ ERROR:  "IDOValueType.GetValue: failed to parse normalized string [false], Type 
 RIGHT:  [..., "username", 0, ...]
 ```
 
-### Parameter arrays must be flat
+### Parameter arrays must be flat (Invoke only)
 
-The invoke body is a raw JSON array. Do **not** wrap it.
+The `/invoke` body is a raw JSON array. Do **not** wrap it.
 
 ```
 WRONG:  { "parameters": ["TaskName", ...] }
 RIGHT:  ["TaskName", ...]
 ```
+
+### UpdateCollection only processes one record per request
+
+Even though the `Changes` array accepts multiple entries, only the first item in the array is processed — subsequent items fail silently or with an error.
+
+**Fix:** Send one `Changes` entry per HTTP request. Loop over records individually. In n8n this happens automatically since the HTTP Request node processes one input item at a time.
+
+The `/update` body uses a `"Changes"` array with numeric action codes — **not** `"Items"` with string action names. A common mistake when guessing the format:
+
+```
+WRONG:  { "Items": [{ "Action": "Delete", "Properties": { "RowPointer": "..." } }] }
+RIGHT:  { "Changes": [{ "Action": 4, "ItemId": "PBT=[...]..." }] }
+```
+
+Action codes: `1` = Insert, `2` = Update, `4` = Delete. See [03_CORE_OPERATIONS.md](03_CORE_OPERATIONS.md) for the full schema.
+
+### Importing curl into n8n or Postman
+
+Tools like n8n and Postman import curl in **standard bash format only**. PowerShell-specific syntax will fail with "unsupported format".
+
+```
+WRONG (PowerShell):  curl.exe -s -X POST "..." `
+                       -H "Authorization: $TOKEN" `
+                       -d '[...]'
+
+RIGHT (bash, single line):  curl -s -X POST "..." -H "Authorization: TOKEN_VALUE" -H "Content-Type: application/json" -d '[...]'
+```
+
+Rules for importable curl:
+- Use `curl`, not `curl.exe`
+- No backtick (`` ` ``) or backslash (`\`) line continuations — everything on one line
+- Substitute the literal token value; environment variable references (`$TOKEN`) won't resolve on import
 
 ### All positions must be present
 
@@ -152,17 +184,18 @@ The task name exists but the parameters failed validation. Check `Parameters[3]`
 
 ### "You may not call this 'SpName' as it has been converted to custom assembly application method"
 
-This means the stored procedure has been migrated from raw SQL to an extension class (C# DLL). Direct `EXEC SpName` calls from SQL no longer work.
+Infor is migrating stored procedures to .NET extension class methods as part of their **database code-out** initiative. Once migrated, direct `EXEC SpName` SQL calls stop working. This affects any SQL scripts your organization previously ran directly against the database.
 
-**Fix:** Call it through the IDO REST API instead. See the [Discovery Guide](05_DISCOVERY_GUIDE.md) for how to find the IDO and method name:
+**Fix:** Call it through the IDO REST API instead. See the [Discovery Guide](05_DISCOVERY_GUIDE.md) for how to find the IDO and method name. Typically you already know the SP name — search `IdoMethods` by method name (the IDO method name usually matches or closely resembles the SP name):
 
 ```bash
-# Find which IDO hosts the converted SP
-curl -s "$SYTELINE_BASE_URL/load/IdoMethods?properties=CollectionName,MethodName,StoredProcedure&filter=StoredProcedure%20LIKE%20N'%25SpName%25'&recordcap=0" \
+curl -s "$SYTELINE_BASE_URL/load/IdoMethods?properties=CollectionName,MethodName,MethodType&filter=MethodName%20LIKE%20N'%25SpName%25'&recordcap=10" \
   -H "Authorization: $TOKEN"
 ```
 
-Then invoke it via `/invoke/{IDO}?method={MethodName}`.
+Then get parameters and invoke via `/invoke/{IDO}?method={MethodName}`.
+
+> **Note:** As SPs are converted, the `StoredProcedure` property on `IdoMethods` goes empty for converted methods — there is no longer an SP to reference. Searching by `MethodName` is more reliable than searching by `StoredProcedure`.
 
 ---
 
