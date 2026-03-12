@@ -114,6 +114,101 @@ It walks through IdoCollections → IdoProperties → IdoMethods and presents a 
 
 ---
 
+## 2026-03-11 — SLJobmatls IDO Introspection
+
+**Request:** Inspect the `SLJobmatls` IDO — properties, methods, and structure.
+
+**Note:** The IDO name is `SLJobmatls` (lowercase 'm') — not `SLJobMatls`. Always verify casing via IdoCollections first.
+
+**Curl commands executed:**
+
+```bash
+# Step 1 — verify IDO exists and get casing
+RESPONSE=$(curl -s "$SYTELINE_BASE_URL/token/$DEFAULT_SITE" \
+  -H "username: $SYTELINE_AGENT_USERNAME" \
+  -H "password: $SYTELINE_AGENT_PASSWORD")
+TOKEN=$(pwsh -NoProfile -Command "('$RESPONSE' | ConvertFrom-Json).Token")
+
+curl -s "$SYTELINE_BASE_URL/load/IdoCollections?properties=CollectionName,AccessAs&filter=CollectionName%3D'SLJobMatls'&recordcap=1" \
+  -H "Authorization: $TOKEN"
+
+# Step 2 — get all properties
+RESPONSE=$(curl -s "$SYTELINE_BASE_URL/token/$DEFAULT_SITE" \
+  -H "username: $SYTELINE_AGENT_USERNAME" \
+  -H "password: $SYTELINE_AGENT_PASSWORD")
+TOKEN=$(pwsh -NoProfile -Command "('$RESPONSE' | ConvertFrom-Json).Token")
+
+curl -s "$SYTELINE_BASE_URL/load/IdoProperties?properties=PropertyName,DataType,IsReadOnly,ColumnName&filter=CollectionName%3D'SLJobmatls'&recordcap=0" \
+  -H "Authorization: $TOKEN"
+
+# Step 3 — get all methods
+RESPONSE=$(curl -s "$SYTELINE_BASE_URL/token/$DEFAULT_SITE" \
+  -H "username: $SYTELINE_AGENT_USERNAME" \
+  -H "password: $SYTELINE_AGENT_PASSWORD")
+TOKEN=$(pwsh -NoProfile -Command "('$RESPONSE' | ConvertFrom-Json).Token")
+
+curl -s "$SYTELINE_BASE_URL/load/IdoMethods?properties=MethodName,MethodType&filter=CollectionName%3D'SLJobmatls'&recordcap=0" \
+  -H "Authorization: $TOKEN"
+```
+
+**Results:**
+
+**IDO:** `SLJobmatls` | `AccessAs: BaseSyteLine` | 301 properties (83 writable, 79 read-only, 139 derived) | 69 methods
+
+**Primary key:** `Job` + `Suffix` + `Sequence` — each record is one component/material line on a job.
+
+**Key writable properties:**
+
+| Property | Column | Notes |
+|---|---|---|
+| `Job` | `job` | |
+| `Suffix` | `suffix` | |
+| `Sequence` | `sequence` | |
+| `Item` | `item` | Component item number |
+| `OperNum` | `oper_num` | Which routing operation this material feeds |
+| `MatlQty` | `matl_qty` | Required quantity |
+| `QtyReleased` | `qty_released` | |
+| `QtyIssued` | `qty_issued` | |
+| `UM` | `u_m` | Unit of measure |
+| `ScrapFact` | `scrap_fact` | |
+| `Backflush` | `backflush` | |
+| `BflushLoc` | `bflush_loc` | |
+| `MatlType` | `matl_type` | |
+| `OptCode` | `opt_code` | Optional/required flag |
+| `AltGroup` / `AltGroupRank` | `alt_group` / `alt_group_rank` | Alternate material groups |
+| `PlannedAlternate` | `planned_alternate` | |
+| `PickDate` | `pick_date` | |
+| `ACost`, `ALbrCost`, `AMatlCost`, `AFovhdCost`, `AVovhdCost`, `AOutCost` | `a_*` columns | Actual cost buckets |
+
+**Key read-only properties:** `ItmDescription`, `MatlDescription`, `ItmLotTracked`, `ItmSerialTracked`, `ItmUM`, `ItmProductCode`, `ItmPhantomFlag`, `JobStat`, `JobPlant`, `JshEndDate`
+
+**Subcollections:**
+
+| Subcollection | Contents |
+|---|---|
+| `SLJobRoutes` | Back-link to the routing operation this material feeds |
+| `SLPoItems` | PO lines sourcing this material |
+| `SLPreassignedLots` | Pre-assigned lot numbers |
+| `SLSerials` | Pre-assigned serials |
+| `SLItemLocAlls` | Item location data |
+| `SLJobRefs` | Job reference cross-links |
+| `SLTrnitems` | Transfer/transaction items |
+| `SLPreqitems` | Purchase requisition items |
+
+**Notable methods:**
+- `ProcessJobMatlTransSp` (type 2) — issue/return material transactions against a job
+- `CurrentMaterialsUpdInsSp` / `CurrentMaterialsDeleteSp` (type 2) — insert/delete material lines
+- `JobMaterialsPreDeleteSp` / `JobMaterialsPostDeleteSp` (type 2) — delete lifecycle hooks
+- `GetJobMatlsSp` (type 3) — retrieve material list
+- `DeleteBOMComponentsSp` (type 3) — bulk BOM component deletion
+- `JoblowBG` / `JoblowSp` (type 2/3) — job cost rollup (BG = background task, Sp = inline)
+- `EjoblowBG` / `EjoblowSp` (type 2/3) — estimated job cost rollup
+- `BomChgBG` / `BomChgSp` (type 2/3) — BOM change
+
+**Pattern noted:** BG/Sp method pairs appear consistently across job IDOs. `*BG` submits as a background task via `BGTaskDefinitions`; `*Sp` runs inline via `/invoke`.
+
+---
+
 ## 2026-03-10 — Delete Zero-Price Records After Item Price Change
 
 **Request:** After running `ItemPriceChangeSp`, duplicate item price records are created with `UnitPrice1 = 0`. Load the offending records and delete them.
