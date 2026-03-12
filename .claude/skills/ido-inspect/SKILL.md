@@ -1,3 +1,8 @@
+---
+name: ido-inspect
+description: Inspect a Syteline IDO — fetch its properties, methods, and optionally method parameters from the live API.
+---
+
 # IDO Introspection
 
 Inspect the Syteline IDO named **$ARGUMENTS** using the live API.
