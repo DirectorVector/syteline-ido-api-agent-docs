@@ -34,6 +34,14 @@ TOKEN=$(curl -s "$SYTELINE_BASE_URL/token/$SITE_CONFIG" \
   -H "password: $SYTELINE_AGENT_PASSWORD" | jq -r '.Token')
 ```
 
+> **Windows/MSYS without jq:** `jq` is not pre-installed on Windows. Use PowerShell to extract the token:
+> ```bash
+> RESPONSE=$(curl -s "$SYTELINE_BASE_URL/token/$SITE_CONFIG" \
+>   -H "username: $SYTELINE_AGENT_USERNAME" \
+>   -H "password: $SYTELINE_AGENT_PASSWORD")
+> TOKEN=$(pwsh -NoProfile -Command "('$RESPONSE' | ConvertFrom-Json).Token")
+> ```
+
 ### PowerShell
 
 ```powershell
