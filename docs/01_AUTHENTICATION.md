@@ -64,6 +64,17 @@ $TOKEN = (curl -s "$env:SYTELINE_BASE_URL/token/$SITE_CONFIG" `
 - `Success: true` — token is valid
 - `Success: false` — check `Message` for details (bad credentials, unlicensed user, etc.)
 
+## Token Lifespan
+
+Tokens **do not expire on a timer** — a token remains valid indefinitely until the session is destroyed.
+
+**Sessions are destroyed when you call `Invoke` on an IDO method.** After a successful Invoke, the token is no longer valid. Any subsequent Load, Update, or Invoke using that token will fail with `"Invalid token"`.
+
+**Practical implications:**
+- Load and Update calls are safe — they do not destroy the session.
+- After any Invoke call, acquire a new token before making further requests.
+- Do not cache a token across an Invoke boundary.
+
 ## Using the Token
 
 The token is passed as the `Authorization` header on all subsequent requests. It is **not** prefixed with `Bearer` — use the raw value.

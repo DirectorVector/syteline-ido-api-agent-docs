@@ -139,6 +139,14 @@ Tokens contain special characters (`/`, `+`, `=`) that break `Invoke-RestMethod`
 
 **Fix:** Use `curl` or `[System.Net.WebClient]` instead. The bash/PowerShell curl wrapper handles it correctly.
 
+### "Invalid token" after an Invoke call
+
+Tokens are session-bound and **Invoke destroys the session**. After any `/invoke` call completes (success or failure), the token is gone. Subsequent requests with the same token return `"Invalid token"`.
+
+**Fix:** Re-authenticate immediately after each Invoke call before making any further requests.
+
+Load and Update calls do **not** destroy the session — only Invoke does.
+
 ### Token not prefixed with Bearer
 
 Unlike most REST APIs, the token goes directly into the `Authorization` header without a `Bearer ` prefix.
