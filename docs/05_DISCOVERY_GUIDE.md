@@ -48,12 +48,14 @@ curl -s "$SYTELINE_BASE_URL/load/IdoCollections?properties=CollectionName,Access
 
 ### Strategy B: Search by stored procedure name
 
-If you're converting a SQL script that calls a stored procedure:
+If you're converting a SQL script that calls a stored procedure, search by method name (the IDO method name usually matches or closely resembles the SP name):
 
 ```bash
-curl -s "$SYTELINE_BASE_URL/load/IdoMethods?properties=CollectionName,MethodName,MethodType,StoredProcedure&filter=StoredProcedure%20LIKE%20N'%25ItemPriceChangeSp%25'&recordcap=10" \
+curl -s "$SYTELINE_BASE_URL/load/IdoMethods?properties=CollectionName,MethodName,MethodType&filter=MethodName%20LIKE%20N'%25ItemPriceChangeSp%25'&recordcap=10" \
   -H "Authorization: $TOKEN"
 ```
+
+> **Note:** The `StoredProcedure` property does not exist on `IdoMethods` in all environments — you'll get `"Property StoredProcedure not found"`. Filter by `MethodName` instead; the method name is sufficient.
 
 This directly tells you which IDO hosts the method and whether it's a stored procedure or extension class.
 
@@ -119,12 +121,7 @@ curl -s "$SYTELINE_BASE_URL/load/IdoMethods?properties=MethodName,MethodType&fil
   -H "Authorization: $TOKEN"
 ```
 
-This tells you:
-- What methods are available
-- Whether each is a stored procedure (`MethodType=0`) or extension class (`MethodType=2`)
-- The stored procedure name (if applicable)
-
-> **Note:** The `StoredProcedure` property is documented in some Syteline versions but may not exist on `IdoMethods` in your environment — you'll get `"Property StoredProcedure not found"`. Omit it and use just `MethodName,MethodType`; the method name is sufficient to proceed to Step 4.
+This tells you what methods are available and whether each is a stored procedure or extension class. The method name is sufficient to proceed to Step 4.
 
 When a stored procedure has been converted to an extension class (MethodType=2), it can **only** be called through the IDO API, not via direct SQL `EXEC`.
 
@@ -206,7 +203,7 @@ This compound key tells you: a price record is uniquely identified by item + cur
 ```
 1. What IDO do I need?
    → Search IdoCollections by name
-   → Search IdoMethods by StoredProcedure name
+   → Search IdoMethods by MethodName (LIKE %SpName%)
    → Search IdoTables by database table name
    → Poke around with LoadCollection (recordcap=3)
 
@@ -278,7 +275,7 @@ When you encounter an error like:
 ### 1. Find the IDO that hosts the method
 
 ```bash
-curl -s "$SYTELINE_BASE_URL/load/IdoMethods?properties=CollectionName,MethodName,MethodType,StoredProcedure&filter=StoredProcedure%20LIKE%20N'%25ItemPriceChangeSp%25'&recordcap=10" \
+curl -s "$SYTELINE_BASE_URL/load/IdoMethods?properties=CollectionName,MethodName,MethodType&filter=MethodName%20LIKE%20N'%25ItemPriceChangeSp%25'&recordcap=10" \
   -H "Authorization: $TOKEN"
 ```
 
