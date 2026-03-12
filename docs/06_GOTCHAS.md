@@ -143,9 +143,7 @@ Tokens contain special characters (`/`, `+`, `=`) that break `Invoke-RestMethod`
 
 Tokens are session-bound and **Invoke destroys the session**. After any `/invoke` call completes (success or failure), the token is gone. Subsequent requests with the same token return `"Invalid token"`.
 
-**Fix:** Re-authenticate immediately after each Invoke call before making any further requests.
-
-Load and Update calls do **not** destroy the session — only Invoke does.
+**Fix:** Fetch a fresh token immediately before every API call. Do not reuse tokens across calls.
 
 ### Token not prefixed with Bearer
 

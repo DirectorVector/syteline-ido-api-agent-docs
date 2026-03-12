@@ -70,10 +70,14 @@ Tokens **do not expire on a timer** — a token remains valid indefinitely until
 
 **Sessions are destroyed when you call `Invoke` on an IDO method.** After a successful Invoke, the token is no longer valid. Any subsequent Load, Update, or Invoke using that token will fail with `"Invalid token"`.
 
-**Practical implications:**
-- Load and Update calls are safe — they do not destroy the session.
-- After any Invoke call, acquire a new token before making further requests.
-- Do not cache a token across an Invoke boundary.
+**Recommended pattern — fetch a fresh token before every API call:**
+
+```bash
+TOKEN=$(...)  # get token
+curl ... -H "Authorization: $TOKEN"  # use immediately
+```
+
+Do not cache tokens across calls. The overhead of re-authenticating is negligible and avoids all session-expiry edge cases.
 
 ## Using the Token
 
