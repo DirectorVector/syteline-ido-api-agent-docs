@@ -34,6 +34,14 @@ TOKEN=$(curl -s "$SYTELINE_BASE_URL/token/$SITE_CONFIG" \
   -H "password: $SYTELINE_AGENT_PASSWORD" | jq -r '.Token')
 ```
 
+> **Windows/MSYS without jq:** `jq` is not pre-installed on Windows. Use PowerShell to extract the token:
+> ```bash
+> RESPONSE=$(curl -s "$SYTELINE_BASE_URL/token/$SITE_CONFIG" \
+>   -H "username: $SYTELINE_AGENT_USERNAME" \
+>   -H "password: $SYTELINE_AGENT_PASSWORD")
+> TOKEN=$(pwsh -NoProfile -Command "('$RESPONSE' | ConvertFrom-Json).Token")
+> ```
+
 ### PowerShell
 
 ```powershell
@@ -55,6 +63,21 @@ $TOKEN = (curl -s "$env:SYTELINE_BASE_URL/token/$SITE_CONFIG" `
 
 - `Success: true` — token is valid
 - `Success: false` — check `Message` for details (bad credentials, unlicensed user, etc.)
+
+## Token Lifespan
+
+Tokens **do not expire on a timer** — a token remains valid indefinitely until the session is destroyed.
+
+**Sessions are destroyed when you call `Invoke` on an IDO method.** After a successful Invoke, the token is no longer valid. Any subsequent Load, Update, or Invoke using that token will fail with `"Invalid token"`.
+
+**Recommended pattern — fetch a fresh token before every API call:**
+
+```bash
+TOKEN=$(...)  # get token
+curl ... -H "Authorization: $TOKEN"  # use immediately
+```
+
+Do not cache tokens across calls. The overhead of re-authenticating is negligible and avoids all session-expiry edge cases.
 
 ## Using the Token
 

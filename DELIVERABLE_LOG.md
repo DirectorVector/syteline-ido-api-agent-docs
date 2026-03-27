@@ -2,6 +2,213 @@
 
 ---
 
+## 2026-03-11 — Environment Validation, Doc Fixes, and IDO Introspection
+
+**Request:** Validate that the docs are sufficient for an agent to connect and introspect IDOs. Discovered and fixed several gaps through live testing.
+
+---
+
+### How to Connect on Windows (No jq)
+
+`jq` is **not installed** on this Windows/MSYS environment. The bash token example using `jq -r '.Token'` silently fails, returning an empty token and causing all subsequent calls to return `"Invalid token"`.
+
+**Working token pattern for this environment:**
+
+```bash
+RESPONSE=$(curl -s "$SYTELINE_BASE_URL/token/$DEFAULT_SITE" \
+  -H "username: $SYTELINE_AGENT_USERNAME" \
+  -H "password: $SYTELINE_AGENT_PASSWORD")
+TOKEN=$(pwsh -NoProfile -Command "('$RESPONSE' | ConvertFrom-Json).Token")
+```
+
+`pwsh` (PowerShell 7) is available at `/c/Program Files/PowerShell/7/pwsh`. Use this pattern for every token fetch.
+
+**Environment variables are set as Windows system env vars** — no `.env` file needed. All of `SYTELINE_BASE_URL`, `DEFAULT_SITE`, `SYTELINE_AGENT_USERNAME`, `SYTELINE_AGENT_PASSWORD` are accessible directly from bash.
+
+---
+
+### Token Session Behavior
+
+- Tokens **do not expire on a timer**
+- Tokens are **destroyed after any `Invoke` call** (success or failure)
+- `Load` and `Update` calls do **not** destroy the token
+- **Safest pattern: fetch a fresh token immediately before every API call** — don't cache
+
+---
+
+### Confirmed IdoProperties Field Names
+
+When querying `IdoProperties`, the correct property names are:
+
+| Use this | Not this |
+|---|---|
+| `PropertyName` | `PropName` |
+| `ColumnName` | `BoundColumn` |
+| `CollectionName` | — |
+| `DataType` | — |
+| `IsReadOnly` | — |
+
+Writable properties have `IsReadOnly = null` or `"0"`. Read-only = `"1"`. Derived properties (computed, no DB column) have `ColumnName = null`.
+
+---
+
+### StoredProcedure Property Does Not Exist on IdoMethods
+
+Querying `IdoMethods` with `StoredProcedure` in the properties list returns:
+> `"Property StoredProcedure not found on IdoMethods IDO."`
+
+Use `MethodName,MethodType` only. Search by `MethodName LIKE N'%SpName%'` to find a method by SP name.
+
+**MethodType values observed:**
+- `2` — stored procedure (most common, includes all standard `...Sp` methods)
+- `3` — .NET extension class method (e.g., `CLM_*`, converted SPs)
+- `0` — system/internal methods (`DefineVariableSp`, `UndefineVariableSp`)
+
+---
+
+### SLItems IDO — Key Facts
+
+**Primary key:** `Item` (`item` column)
+
+**Most useful writable properties:** `Item`, `Description`, `Stat`, `UM`, `ProdType`, `MatlType`, `ProductCode`, `CostMethod`, `CostType`, `UnitCost`, `LeadTime`, `LotSize`, `OrderMin/Max/Mult`, `LotTracked`, `SerialTracked`, `Buyer`, `MfgWhse`, `SupplyWhse`, `PlanFlag`, `MrpPart`, `MpsFlag`
+
+**Key subcollections (derived properties with no ColumnName):**
+
+| Subcollection | Contents |
+|---|---|
+| `SLItemwhses` | Live inventory — qty on hand, allocated, WIP per warehouse |
+| `SLSupDems` | Supply & demand detail (POs, jobs, CO lines) |
+| `SLCoitems` | Customer order lines for this item |
+| `SLPoItems` | Purchase order lines |
+| `SLJobmatls` | Job BOM material requirements |
+| `SLJobRoutes` | Routing operations on open jobs |
+| `SLMatltrans` | Material transaction history |
+| `SLPlanningDetails` | MRP/planning detail |
+| `SLAttributes` | Item attribute values |
+| `SLRelatedItems` | Alternate/related items |
+| `SLExpiringLots` | Lot expiration tracking |
+
+**Total:** 477 properties (263 writable, 61 read-only, 153 derived), 75 methods.
+
+---
+
+### SLJobRoutes IDO — Key Facts
+
+**Primary key:** `Job` + `Suffix` + `OperNum` — each record is one operation step on a manufacturing job.
+
+**Key writable properties:** `JshStartDate`, `JshEndDate`, `JshRunLbrHrs`, `JshRunMchHrs`, `JshSetupHrs`, `JshSchedHrs`, `JshSchedDrv`, `Complete`, `Efficiency`, `BflushType`
+
+**Key subcollection:** `JrtResourceGroups` — resource groups assigned to the operation
+
+**Notable methods:** `CompleteJobOperationSP`, `CalcJobrouteRunDurSp`, `JobOperationsSp`
+
+---
+
+### /ido-inspect Skill
+
+A `/ido-inspect` slash command was added to this repo at `.claude/skills/ido-inspect/SKILL.md`.
+
+Usage: `/ido-inspect SLItems`
+
+It walks through IdoCollections → IdoProperties → IdoMethods and presents a categorized summary. If you then ask about a specific method's parameters, it queries `IdoMethodParameters`.
+
+---
+
+## 2026-03-11 — SLJobmatls IDO Introspection
+
+**Request:** Inspect the `SLJobmatls` IDO — properties, methods, and structure.
+
+**Note:** The IDO name is `SLJobmatls` (lowercase 'm') — not `SLJobMatls`. Always verify casing via IdoCollections first.
+
+**Curl commands executed:**
+
+```bash
+# Step 1 — verify IDO exists and get casing
+RESPONSE=$(curl -s "$SYTELINE_BASE_URL/token/$DEFAULT_SITE" \
+  -H "username: $SYTELINE_AGENT_USERNAME" \
+  -H "password: $SYTELINE_AGENT_PASSWORD")
+TOKEN=$(pwsh -NoProfile -Command "('$RESPONSE' | ConvertFrom-Json).Token")
+
+curl -s "$SYTELINE_BASE_URL/load/IdoCollections?properties=CollectionName,AccessAs&filter=CollectionName%3D'SLJobMatls'&recordcap=1" \
+  -H "Authorization: $TOKEN"
+
+# Step 2 — get all properties
+RESPONSE=$(curl -s "$SYTELINE_BASE_URL/token/$DEFAULT_SITE" \
+  -H "username: $SYTELINE_AGENT_USERNAME" \
+  -H "password: $SYTELINE_AGENT_PASSWORD")
+TOKEN=$(pwsh -NoProfile -Command "('$RESPONSE' | ConvertFrom-Json).Token")
+
+curl -s "$SYTELINE_BASE_URL/load/IdoProperties?properties=PropertyName,DataType,IsReadOnly,ColumnName&filter=CollectionName%3D'SLJobmatls'&recordcap=0" \
+  -H "Authorization: $TOKEN"
+
+# Step 3 — get all methods
+RESPONSE=$(curl -s "$SYTELINE_BASE_URL/token/$DEFAULT_SITE" \
+  -H "username: $SYTELINE_AGENT_USERNAME" \
+  -H "password: $SYTELINE_AGENT_PASSWORD")
+TOKEN=$(pwsh -NoProfile -Command "('$RESPONSE' | ConvertFrom-Json).Token")
+
+curl -s "$SYTELINE_BASE_URL/load/IdoMethods?properties=MethodName,MethodType&filter=CollectionName%3D'SLJobmatls'&recordcap=0" \
+  -H "Authorization: $TOKEN"
+```
+
+**Results:**
+
+**IDO:** `SLJobmatls` | `AccessAs: BaseSyteLine` | 301 properties (83 writable, 79 read-only, 139 derived) | 69 methods
+
+**Primary key:** `Job` + `Suffix` + `Sequence` — each record is one component/material line on a job.
+
+**Key writable properties:**
+
+| Property | Column | Notes |
+|---|---|---|
+| `Job` | `job` | |
+| `Suffix` | `suffix` | |
+| `Sequence` | `sequence` | |
+| `Item` | `item` | Component item number |
+| `OperNum` | `oper_num` | Which routing operation this material feeds |
+| `MatlQty` | `matl_qty` | Required quantity |
+| `QtyReleased` | `qty_released` | |
+| `QtyIssued` | `qty_issued` | |
+| `UM` | `u_m` | Unit of measure |
+| `ScrapFact` | `scrap_fact` | |
+| `Backflush` | `backflush` | |
+| `BflushLoc` | `bflush_loc` | |
+| `MatlType` | `matl_type` | |
+| `OptCode` | `opt_code` | Optional/required flag |
+| `AltGroup` / `AltGroupRank` | `alt_group` / `alt_group_rank` | Alternate material groups |
+| `PlannedAlternate` | `planned_alternate` | |
+| `PickDate` | `pick_date` | |
+| `ACost`, `ALbrCost`, `AMatlCost`, `AFovhdCost`, `AVovhdCost`, `AOutCost` | `a_*` columns | Actual cost buckets |
+
+**Key read-only properties:** `ItmDescription`, `MatlDescription`, `ItmLotTracked`, `ItmSerialTracked`, `ItmUM`, `ItmProductCode`, `ItmPhantomFlag`, `JobStat`, `JobPlant`, `JshEndDate`
+
+**Subcollections:**
+
+| Subcollection | Contents |
+|---|---|
+| `SLJobRoutes` | Back-link to the routing operation this material feeds |
+| `SLPoItems` | PO lines sourcing this material |
+| `SLPreassignedLots` | Pre-assigned lot numbers |
+| `SLSerials` | Pre-assigned serials |
+| `SLItemLocAlls` | Item location data |
+| `SLJobRefs` | Job reference cross-links |
+| `SLTrnitems` | Transfer/transaction items |
+| `SLPreqitems` | Purchase requisition items |
+
+**Notable methods:**
+- `ProcessJobMatlTransSp` (type 2) — issue/return material transactions against a job
+- `CurrentMaterialsUpdInsSp` / `CurrentMaterialsDeleteSp` (type 2) — insert/delete material lines
+- `JobMaterialsPreDeleteSp` / `JobMaterialsPostDeleteSp` (type 2) — delete lifecycle hooks
+- `GetJobMatlsSp` (type 3) — retrieve material list
+- `DeleteBOMComponentsSp` (type 3) — bulk BOM component deletion
+- `JoblowBG` / `JoblowSp` (type 2/3) — job cost rollup (BG = background task, Sp = inline)
+- `EjoblowBG` / `EjoblowSp` (type 2/3) — estimated job cost rollup
+- `BomChgBG` / `BomChgSp` (type 2/3) — BOM change
+
+**Pattern noted:** BG/Sp method pairs appear consistently across job IDOs. `*BG` submits as a background task via `BGTaskDefinitions`; `*Sp` runs inline via `/invoke`.
+
+---
+
 ## 2026-03-10 — Delete Zero-Price Records After Item Price Change
 
 **Request:** After running `ItemPriceChangeSp`, duplicate item price records are created with `UnitPrice1 = 0`. Load the offending records and delete them.

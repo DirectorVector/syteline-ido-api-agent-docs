@@ -139,6 +139,12 @@ Tokens contain special characters (`/`, `+`, `=`) that break `Invoke-RestMethod`
 
 **Fix:** Use `curl` or `[System.Net.WebClient]` instead. The bash/PowerShell curl wrapper handles it correctly.
 
+### "Invalid token" after an Invoke call
+
+Tokens are session-bound and **Invoke destroys the session**. After any `/invoke` call completes (success or failure), the token is gone. Subsequent requests with the same token return `"Invalid token"`.
+
+**Fix:** Fetch a fresh token immediately before every API call. Do not reuse tokens across calls.
+
 ### Token not prefixed with Bearer
 
 Unlike most REST APIs, the token goes directly into the `Authorization` header without a `Bearer ` prefix.
@@ -194,8 +200,6 @@ curl -s "$SYTELINE_BASE_URL/load/IdoMethods?properties=CollectionName,MethodName
 ```
 
 Then get parameters and invoke via `/invoke/{IDO}?method={MethodName}`.
-
-> **Note:** As SPs are converted, the `StoredProcedure` property on `IdoMethods` goes empty for converted methods — there is no longer an SP to reference. Searching by `MethodName` is more reliable than searching by `StoredProcedure`.
 
 ---
 
